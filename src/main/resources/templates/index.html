@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat com OpenAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        #promptInput {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        #promptInput:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #sendBtn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        #sendBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #clearBtn {
+            background: #f8f9fa;
+            color: #666;
+            border: 2px solid #e1e5e9;
+        }
+
+        #clearBtn:hover {
+            background: #e9ecef;
+            border-color: #dee2e6;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .response-container {
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .response-header {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .response-text {
+            color: #333;
+            line-height: 1.6;
+            font-size: 15px;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            background: #ffeaa7;
+            border-left-color: #fdcb6e;
+        }
+
+        .error .response-header {
+            color: #e17055;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <h1>🤖 Chat AI</h1>
+
+    <div class="input-group">
+        <label for="promptInput">Digite sua pergunta:</label>
+        <textarea
+                id="promptInput"
+                placeholder="Ex: Explique o que é inteligência artificial..."
+                rows="4"
+        ></textarea>
+    </div>
+
+    <div class="button-group">
+        <button id="sendBtn" onclick="sendMessage()">
+            Enviar Pergunta
+        </button>
+        <button id="clearBtn" onclick="clearChat()">
+            Limpar
+        </button>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Processando sua pergunta...</p>
+    </div>
+
+    <div class="response-container" id="responseContainer">
+        <div class="response-header">Resposta:</div>
+        <div class="response-text" id="responseText"></div>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const prompt = document.getElementById('promptInput').value.trim();
+        const sendBtn = document.getElementById('sendBtn');
+        const loading = document.getElementById('loading');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseText = document.getElementById('responseText');
+
+        if (!prompt) {
+            alert('Por favor, digite uma pergunta!');
+            return;
+        }
+
+        // Mostrar loading
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Enviando...';
+        loading.style.display = 'block';
+        responseContainer.style.display = 'none';
+
+        try {
+            const response = await fetch(`/chat?prompt=${encodeURIComponent(prompt)}`);
+
+            if (!response.ok) {
+                throw new Error(`Erro ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.text();
+
+            // Mostrar resposta
+            responseText.textContent = result;
+            responseContainer.className = 'response-container';
+            responseContainer.style.display = 'block';
+
+        } catch (error) {
+            // Mostrar erro
+            responseText.textContent = `Erro ao processar a pergunta: ${error.message}`;
+            responseContainer.className = 'response-container error';
+            responseContainer.style.display = 'block';
+        } finally {
+            // Restaurar estado
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Enviar Pergunta';
+            loading.style.display = 'none';
+        }
+    }
+
+    function clearChat() {
+        document.getElementById('promptInput').value = '';
+        document.getElementById('responseContainer').style.display = 'none';
+        document.getElementById('promptInput').focus();
+    }
+
+    // Permitir envio com Enter (Ctrl+Enter)
+    document.getElementById('promptInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            sendMessage();
+        }
+    });
+
+    // Focar no input ao carregar
+    window.onload = function() {
+        document.getElementById('promptInput').focus();
+    };
+</script>
+</body>
+</html>
